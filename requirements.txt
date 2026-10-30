@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+oracledb
+pandas
+openai
+python-dotenv
+pydantic
+pydantic-settings
+sqlparse

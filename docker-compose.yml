@@ -1,0 +1,18 @@
+services:
+  oracle-agent:
+    build: .
+    env_file:
+      - .env
+    environment:
+      WALLET_LOCATION: /app/wallet
+    volumes:
+      - ./wallet:/app/wallet:ro
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    ports:
+      - "3000:8080"
+    restart: always
