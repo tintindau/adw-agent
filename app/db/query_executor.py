@@ -10,10 +10,13 @@ class QueryExecutor:
 
         with get_pool().acquire() as conn:
 
-            return pd.read_sql(
+            data = pd.read_sql(
                 sql,
                 conn,
                 params=params
-            ).to_dict(
+            )
+            data = data.astype(object).where(pd.notna(data), None)
+
+            return data.to_dict(
                 orient="records"
             )

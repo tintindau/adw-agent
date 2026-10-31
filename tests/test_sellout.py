@@ -1,4 +1,3 @@
-from datetime import date, timedelta
 import unittest
 from unittest.mock import patch
 
@@ -6,9 +5,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.sellout import router
-from app.db.query_executor import QueryExecutor
 from app.repositories.sellout_repository import SelloutRepository
-from app.services.sellout_service import SelloutService
+from app.services.sellout_service import (
+    SelloutService,
+    build_aggregated_siso_query,
+)
 
 
 class SelloutApiTests(unittest.TestCase):
@@ -17,63 +18,109 @@ class SelloutApiTests(unittest.TestCase):
         app.include_router(router)
         self.client = TestClient(app)
 
-    def test_default_date_returns_sellout_data(self):
-        with patch.object(SelloutService, "get_sellout", return_value=[]) as get_sellout:
-            response = self.client.get("/sellout")
+    def test_month_dimensions_metrics_and_filters_are_forwarded(self):
+        with patch.object(SelloutService, "get_aggregated_siso", return_value=[]) as query:
+            response = self.client.get(
+                "/sellout",
+                params=[
+                    ("month", "202610"),
+                    ("dimensions", "province"),
+                    ("metrics", "so_out_qty"),
+                    ("province", "HANOI"),
+                ],
+            )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"success": True, "data": []})
-        today = date.today()
-        get_sellout.assert_called_once_with(
-            (today - timedelta(days=30)).strftime("%Y%m%d"),
-            (today + timedelta(days=1)).strftime("%Y%m%d"),
+        query.assert_called_once_with(
+            month=202610,
+            dimensions=["province"],
+            metrics=["so_out_qty"],
+            date_=None,
+            region=None,
+            province="HANOI",
+            prod_class_dmx=None,
+            prod_category=None,
+            is_shibu=None,
+            is_dummy=None,
+            prod_type=None,
+            gh_flow=None,
         )
 
-    def test_explicit_date_bounds_are_forwarded(self):
-        with patch.object(SelloutService, "get_sellout", return_value=[]) as get_sellout:
-            response = self.client.get(
-                "/sellout",
-                params={"start_date": "20261001", "end_date": "20261101"},
-            )
-
-        self.assertEqual(response.status_code, 200)
-        get_sellout.assert_called_once_with("20261001", "20261101")
-
-    def test_invalid_calendar_date_is_rejected(self):
-        with patch.object(SelloutService, "get_sellout") as get_sellout:
-            response = self.client.get(
-                "/sellout",
-                params={"start_date": "20260230"},
-            )
+    def test_month_is_required(self):
+        response = self.client.get("/sellout")
 
         self.assertEqual(response.status_code, 422)
-        get_sellout.assert_not_called()
 
-    def test_start_date_must_precede_exclusive_end_date(self):
-        with patch.object(SelloutService, "get_sellout") as get_sellout:
-            response = self.client.get(
-                "/sellout",
-                params={"start_date": "20261101", "end_date": "20261101"},
-            )
+    def test_month_must_have_valid_month_number(self):
+        with patch.object(SelloutService, "get_aggregated_siso") as query:
+            response = self.client.get("/sellout", params={"month": "202613"})
 
         self.assertEqual(response.status_code, 422)
-        get_sellout.assert_not_called()
+        query.assert_not_called()
+
+
+class SelloutQueryBuilderTests(unittest.TestCase):
+    def test_builds_aggregate_query_with_bound_filters(self):
+        sql, params = build_aggregated_siso_query(
+            month=202610,
+            dimensions=["province"],
+            metrics=["so_out_qty"],
+            province="HANOI",
+            prod_type="Con_lai",
+        )
+
+        self.assertEqual(
+            params,
+            {"month": 202610, "province": "HANOI", "prod_type": "Con_lai"},
+        )
+        self.assertIn("SUM(so_out_qty) AS so_out_qty", sql)
+        self.assertIn("GROUP BY province", sql)
+        self.assertIn("s.PROVINCE = :province", sql)
+        self.assertIn("END = :prod_type", sql)
+        self.assertIn("NVL(si.GH_SI_AMOUNT, 0) AS si_amount", sql)
+        self.assertIn("ROWNUM <= 50", sql)
+
+    def test_defaults_metrics_when_dimensions_are_provided(self):
+        sql, _ = build_aggregated_siso_query(
+            month=202610,
+            dimensions=["region"],
+        )
+
+        self.assertIn("SUM(so_out_qty) AS so_out_qty", sql)
+        self.assertIn("SUM(si_amount) AS si_amount", sql)
+
+    def test_ignores_untrusted_dimension_and_metric_identifiers(self):
+        sql, _ = build_aggregated_siso_query(
+            month=202610,
+            dimensions=["province; DROP TABLE dim_product"],
+            metrics=["so_qty DESC"],
+        )
+
+        self.assertNotIn("DROP TABLE", sql)
+        self.assertNotIn("so_qty DESC", sql)
+        self.assertIn("ROWNUM <= 30", sql)
+
+    def test_rejects_invalid_month_and_product_type(self):
+        with self.assertRaises(ValueError):
+            build_aggregated_siso_query(month=202613)
+        with self.assertRaises(ValueError):
+            build_aggregated_siso_query(month=202610, prod_type="Unknown")
 
 
 class SelloutRepositoryTests(unittest.TestCase):
-    def test_query_uses_date_bind_and_requested_projection(self):
-        with patch.object(QueryExecutor, "execute", return_value=[]) as execute:
-            SelloutRepository.get_sellout("20261001", "20261101")
+    def test_service_executes_built_query_through_repository(self):
+        with patch.object(SelloutRepository, "execute", return_value=[]) as execute:
+            result = SelloutService.get_aggregated_siso(
+                month=202610,
+                dimensions=["province"],
+                metrics=["si_amount"],
+            )
 
+        self.assertEqual(result, [])
         sql, params = execute.call_args.args
-        self.assertEqual(
-            params,
-            {"start_date": "20261001", "end_date": "20261101"},
-        )
-        self.assertIn("o.NET_QUANTITY * o.REVENUE_SRC_VND AS Revenue", sql)
-        self.assertIn("REGEXP_REPLACE(o.store_key", sql)
-        self.assertIn("WHERE o.date_key >= :start_date", sql)
-        self.assertIn("AND o.date_key < :end_date", sql)
+        self.assertIn("SUM(si_amount) AS si_amount", sql)
+        self.assertEqual(params, {"month": 202610})
 
 
 class ApplicationRouteTests(unittest.TestCase):
