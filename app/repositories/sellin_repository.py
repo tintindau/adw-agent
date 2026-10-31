@@ -23,3 +23,16 @@ class RevenueRepository:
                 "period": period
             }
         )
+
+
+class SellinRepository:
+    @staticmethod
+    def get_by_month(filters: dict[str, str | None]):
+        sql_file = (
+            Path(__file__).resolve().parents[1]
+            / "sql"
+            / "sellin"
+            / "get_by_month.sql"
+        )
+        sql = sql_file.read_text(encoding="utf-8")
+        return QueryExecutor.execute(sql, filters)
