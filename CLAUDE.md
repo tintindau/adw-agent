@@ -40,7 +40,7 @@ app/
 ├── services/      logic nghiệp vụ, ghép điều kiện lọc từ whitelist
 ├── repositories/  lớp DUY NHẤT được thực thi SQL (qua QueryExecutor)
 ├── analytics/     hàm thuần trên DataFrame: chỉ số phái sinh, xếp hạng, định dạng kết quả
-├── db/            connection pool (oracledb + wallet), QueryExecutor (execute / execute_df)
+├── db/            connection pool (oracledb + wallet), QueryExecutor (execute / execute_df), cache.py
 ├── core/          config (pydantic-settings), logger, security
 ├── models/        request/response model
 ├── mcp/           (sắp có) MCP server + tool, xem docs/MCP_PLAN.md
@@ -84,6 +84,12 @@ Thêm tính năng dữ liệu mới: dùng skill `add-data-feature` (`.claude/sk
 - Service lấy DataFrame qua `Repository.execute_df()` rồi gọi analytics. Trả cho model qua `to_llm_result()` (có `row_count`, `truncated`).
 - Mỗi hàm analytics mới phải có test trong `tests/test_analytics.py`.
 - Giá trị không tính được (chia cho 0) trả `None`, không trả `inf`/`NaN`.
+
+**Cache truy vấn (`app/db/cache.py`)**
+- `QueryExecutor` tự cache kết quả theo SQL + params (TTL + LRU, trong bộ nhớ). Cấu hình: `QUERY_CACHE_ENABLED`, `QUERY_CACHE_TTL_SECONDS`, `QUERY_CACHE_MAX_ENTRIES`.
+- Bộ lọc quyền luôn phải nằm trong SQL/params để key cache tách theo quyền; không bao giờ lọc dữ liệu theo user **sau** khi lấy từ cache.
+- Truy vấn cần dữ liệu tức thời → `execute(..., use_cache=False)`.
+- Theo dõi tỉ lệ hit qua `GET /api/health` (`query_cache`).
 
 ## MCP tool (cho model 9B)
 

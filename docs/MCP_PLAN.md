@@ -114,6 +114,11 @@ app/
 - [ ] Tool so sánh kỳ (tháng này / tháng trước) cho sellout dùng `compare_periods`.
 - [ ] Thêm `row_count`/`truncated` (qua `to_llm_result`) cho output sellout, sellin; cập nhật `knowledge/` tương ứng.
 
+### Cache câu hỏi lặp lại
+- [x] Cache kết quả truy vấn trong `QueryExecutor` (TTL + LRU, key = SQL + params), cấu hình qua `.env`, thống kê ở `/api/health`.
+- [ ] Nếu chạy nhiều worker/container: chuyển sang Redis để dùng chung cache.
+- [ ] Đặt TTL khớp lịch refresh của warehouse (hoặc xoá cache sau mỗi lần refresh).
+
 ### Giai đoạn 3 — Tool dữ liệu (≈1 tuần)
 Bọc các service có sẵn, tham số gọn để model 9B chọn đúng:
 

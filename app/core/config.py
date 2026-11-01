@@ -20,5 +20,10 @@ class Settings(BaseSettings):
         )
     )
 
+    # Cache kết quả truy vấn (app/db/cache.py). Dữ liệu warehouse thường refresh theo ngày.
+    query_cache_enabled: bool = True
+    query_cache_ttl_seconds: int = 900
+    query_cache_max_entries: int = 256
+
 
 settings = Settings()
