@@ -7,7 +7,15 @@ Hướng dẫn cho Claude khi làm việc trong repo này. Trả lời và viế
 NAW Agent: hệ thống AI nội bộ cho Kangaroo. API Python (FastAPI) lấy dữ liệu từ Oracle ADW / NetSuite Analytics Warehouse cho Open WebUI (model `qwen3.5:9b`). Đang bổ sung **MCP server** và phân quyền theo user/group của Open WebUI — xem `docs/MCP_PLAN.md` trước khi làm việc liên quan.
 
 ```
-User → Open WebUI → (tool call / MCP) → NAW Agent → Oracle ADW
+Open WebUI ── Knowledge (vector DB, từ knowledge/)
+    ↓
+Qwen → MCP Client (trong Open WebUI)
+    ↓
+Data MCP Server (app/mcp, sắp có) / REST API (app/api)
+    ↓
+Service (app/services): build SQL từ whitelist, điều phối
+    ↓                     ↘
+Repository → Oracle ADW    Analytics Layer (app/analytics, Pandas)
 ```
 
 Server chạy bằng Docker Desktop trên Windows.
@@ -31,7 +39,8 @@ app/
 ├── api/           endpoint HTTP, chỉ validate tham số rồi gọi service
 ├── services/      logic nghiệp vụ, ghép điều kiện lọc từ whitelist
 ├── repositories/  lớp DUY NHẤT được thực thi SQL (qua QueryExecutor)
-├── db/            connection pool (oracledb + wallet), QueryExecutor
+├── analytics/     hàm thuần trên DataFrame: chỉ số phái sinh, xếp hạng, định dạng kết quả
+├── db/            connection pool (oracledb + wallet), QueryExecutor (execute / execute_df)
 ├── core/          config (pydantic-settings), logger, security
 ├── models/        request/response model
 ├── mcp/           (sắp có) MCP server + tool, xem docs/MCP_PLAN.md
@@ -68,6 +77,13 @@ Thêm tính năng dữ liệu mới: dùng skill `add-data-feature` (`.claude/sk
 - Response thành công: `{"success": true, "data": [...]}`.
 - Cấu hình mới thêm vào `app/core/config.py` và `.env.example`.
 - Tham số tháng dạng `YYYYMM` (int), ngày dạng `YYYYMMDD` (string), validate ở api/.
+
+**Analytics layer (`app/analytics/`)**
+- Tổng hợp nặng (SUM, GROUP BY, lọc) làm ở SQL để ADW xử lý; Pandas chỉ xử lý sau đó: tỉ trọng %, tăng trưởng so kỳ trước, sell-through, top-N + Others, cắt kết quả, xuất file.
+- Hàm thuần nhận/trả DataFrame: không gọi DB, không import repository, api hay mcp.
+- Service lấy DataFrame qua `Repository.execute_df()` rồi gọi analytics. Trả cho model qua `to_llm_result()` (có `row_count`, `truncated`).
+- Mỗi hàm analytics mới phải có test trong `tests/test_analytics.py`.
+- Giá trị không tính được (chia cho 0) trả `None`, không trả `inf`/`NaN`.
 
 ## MCP tool (cho model 9B)
 

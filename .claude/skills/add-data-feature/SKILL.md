@@ -46,6 +46,7 @@ Theo mẫu `app/services/sellout_service.py`:
   - lọc `dimensions`/`metrics` theo whitelist, bỏ giá trị lạ;
   - luôn giới hạn số dòng (`ROWNUM <= 50` hoặc `FETCH FIRST :limit_rows ROWS ONLY`, có `MAX_LIMIT`).
 - Class `<Domain>Service` với `@staticmethod` gọi `build_...` rồi repository.
+- Cần chỉ số phái sinh (tỉ trọng, tăng trưởng, sell-through, top-N + Others) → lấy DataFrame bằng `Repository.execute_df()` rồi dùng hàm trong `app/analytics/`; định dạng kết quả bằng `to_llm_result()`. Chưa có hàm phù hợp thì thêm hàm thuần mới vào `app/analytics/` kèm test, không viết Pandas trong service.
 
 ## 4. API endpoint — `app/api/<domain>.py`
 

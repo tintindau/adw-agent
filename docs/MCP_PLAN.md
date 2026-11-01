@@ -26,20 +26,29 @@
 ## 2. Kiến trúc đích
 
 ```
-User
- ↓
-Open WebUI (qwen3.5:9b)
- ↓  MCP (Streamable HTTP) + định danh user
-NAW Agent  ──  /mcp  (MCP server, FastMCP)
-           ──  /api  (REST cũ, giữ nguyên)
- ↓
+Open WebUI
+    |-- Knowledge (Vector DB)  ← knowledge/*.md, scripts/sync_knowledge.py
+    |
+Qwen (qwen3.5:9b)
+    |
+MCP Client (trong Open WebUI)
+    |  MCP (Streamable HTTP) + định danh user
+Data MCP Server  ──  /mcp (FastMCP)  |  /api (REST cũ)
+    |
 auth layer: user → groups (Open WebUI API) → quyền (policy)
- ↓
-services → repositories → Oracle ADW / NSAW
+    |
+Service: build SQL từ whitelist, điều phối
+    |
+Analytics Layer (Pandas)  ← app/analytics
+    |
+Repository
+    |
+Oracle ADW / NSAW
 ```
 
 Nguyên tắc:
 - **Tái sử dụng service hiện có.** MCP tool chỉ là lớp vỏ mỏng như `app/api/*`, không viết SQL mới trong tool.
+- **SQL tổng hợp, Pandas tính phần sau.** SUM/GROUP BY ở ADW; analytics layer tính tỉ trọng, tăng trưởng, xếp hạng, định dạng kết quả để model 9B không phải tự làm phép tính.
 - **Giữ nguyên quy tắc `SKILL.md`**: LLM không sinh SQL, chỉ chọn tool và tham số.
 - **Một container, hai cổng giao tiếp**: mount MCP vào FastAPI hiện tại ở `/mcp`, REST `/api` vẫn chạy cho đến khi bỏ `webui/connect.py`.
 
@@ -97,6 +106,13 @@ app/
 - [ ] `policy.py`: trước mỗi tool, kiểm tra quyền dùng tool; **ghi đè** bộ lọc bắt buộc vào tham số (user không thể bỏ qua bằng cách đổi prompt).
 - [ ] User không thuộc group nào → chỉ dùng tool mặc định.
 - [ ] Bảo vệ `/api` REST bằng API key trong `app/core/security.py`.
+
+### Giai đoạn 2b — Analytics layer
+- [x] `app/analytics/`: `to_frame`, `to_records`, `to_llm_result`, `top_n_with_others`, `add_share_pct`, `compare_periods`, `add_sell_through_pct`, `export_csv_7z`, có test.
+- [x] `QueryExecutor.execute_df()` và `SelloutRepository.execute_df()`.
+- [x] Chuyển `build_result` của top-products sang dùng analytics (giữ nguyên output).
+- [ ] Tool so sánh kỳ (tháng này / tháng trước) cho sellout dùng `compare_periods`.
+- [ ] Thêm `row_count`/`truncated` (qua `to_llm_result`) cho output sellout, sellin; cập nhật `knowledge/` tương ứng.
 
 ### Giai đoạn 3 — Tool dữ liệu (≈1 tuần)
 Bọc các service có sẵn, tham số gọn để model 9B chọn đúng:

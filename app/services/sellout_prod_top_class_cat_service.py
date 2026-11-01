@@ -1,9 +1,8 @@
-import csv
 import tempfile
-import uuid
 from pathlib import Path
 from typing import Any
 
+from app.analytics import export_csv_7z, to_frame, top_n_with_others
 from app.repositories.sellout_repository import SelloutRepository
 
 SQL_FILE = (
@@ -86,55 +85,26 @@ def build_top_class_cat_query(
     return query, params
 
 
-def _label(row: dict[str, Any]) -> str:
-    return " - ".join(str(v) for k, v in row.items() if k != "amount_")
-
-
-def _amount(row: dict[str, Any]) -> float:
-    return float(row.get("amount_") or 0)
-
-
-def _export_7z(rows: list[dict[str, Any]], export_dir: Path) -> str:
-    import py7zr
-
-    export_dir.mkdir(parents=True, exist_ok=True)
-    name = f"sellout_top_{len(rows)}_{uuid.uuid4().hex[:8]}"
-    csv_path = export_dir / f"{name}.csv"
-    archive_path = export_dir / f"{name}.7z"
-
-    with csv_path.open("w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
-        writer.writeheader()
-        writer.writerows(rows)
-
-    with py7zr.SevenZipFile(archive_path, "w") as archive:
-        archive.write(csv_path, arcname=csv_path.name)
-    csv_path.unlink()
-
-    return str(archive_path)
-
-
 def build_result(rows: list[dict[str, Any]], export_dir: Path = EXPORT_DIR) -> dict[str, Any]:
     """Shape rows for the LLM: small result inline, large result as a .7z plus a trimmed chart."""
-    rows = [{k.lower(): v for k, v in r.items()} for r in rows]
-    total_rows = len(rows)
+    df = to_frame(rows)
+    total_rows = len(df)
     if total_rows == 0:
         return {"status": "empty", "message": "No data matches the filters."}
 
     archive_path = None
-    labels = [_label(r) for r in rows]
-    values = [_amount(r) for r in rows]
-
+    label_columns = [column for column in df.columns if column != "amount_"]
     if total_rows > CHART_ROW_THRESHOLD:
-        archive_path = _export_7z(rows, export_dir)
-        labels = labels[:CHART_TOP_ROWS] + [f"Others ({total_rows - CHART_TOP_ROWS})"]
-        values = values[:CHART_TOP_ROWS] + [sum(values[CHART_TOP_ROWS:])]
+        archive_path = export_csv_7z(df, export_dir, prefix="sellout_top")
+        chart = top_n_with_others(df, "amount_", label_columns, CHART_TOP_ROWS)
+    else:
+        chart = top_n_with_others(df, "amount_", label_columns, total_rows)
 
     return {
         "status": "ok",
         "total_rows_fetched": total_rows,
         "download_file_7z": archive_path,
-        "chart_data": {"labels": labels, "amount_vnd": values},
+        "chart_data": {"labels": chart["label"].tolist(), "amount_vnd": chart["value"].tolist()},
     }
 
 
