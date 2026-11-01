@@ -38,9 +38,11 @@ app/
 └── main.py
 sql/               file SQL template mà service đang đọc
 webui/connect.py   Python tool cũ cài trong Open WebUI (sẽ thay bằng MCP)
+knowledge/         Knowledge (vector DB) của Open WebUI: mô tả output tool cho model
+scripts/sync_knowledge.py  đồng bộ knowledge/ lên Open WebUI
 ```
 
-Thêm tính năng mới theo thứ tự: SQL file → Repository → Service → API endpoint → MCP tool → khai báo quyền → test.
+Thêm tính năng mới theo thứ tự: SQL file → Repository → Service → API endpoint → MCP tool → khai báo quyền → knowledge → test.
 
 ## Quy tắc bắt buộc
 
@@ -74,7 +76,16 @@ Thêm tính năng dữ liệu mới: dùng skill `add-data-feature` (`.claude/sk
 - Tool chỉ là vỏ mỏng gọi service có sẵn.
 - Kết quả gọn (≤ 50 dòng), kèm `row_count` và `truncated`.
 
+## Knowledge (vector DB trên Open WebUI)
+
+- `knowledge/*.md` là nguồn gốc duy nhất; không sửa Knowledge trực tiếp trên giao diện Open WebUI. Chi tiết: `knowledge/README.md`.
+- Thêm/sửa/xoá dimension, metric, bộ lọc hoặc cột output → cập nhật file knowledge tương ứng trong cùng commit. `tests/test_knowledge_docs.py` kiểm tra điều này.
+- Ý nghĩa nghiệp vụ chưa chắc chắn → ghi `TODO`, không đoán.
+- Đồng bộ: `python scripts/sync_knowledge.py --dry-run` rồi chạy thật. Không tự chạy lệnh đồng bộ thật nếu người dùng chưa yêu cầu.
+- `app/rag/` là file rỗng cũ, không dùng.
+
 ## Khi kết thúc thay đổi
 
 - Chạy `python -m pytest tests/` và đảm bảo pass.
+- Nếu output tool thay đổi: nhắc người dùng chạy `scripts/sync_knowledge.py`.
 - Tick các mục tương ứng trong `docs/MCP_PLAN.md` nếu vừa hoàn thành.

@@ -113,6 +113,9 @@ Bọc các service có sẵn, tham số gọn để model 9B chọn đúng:
 - [ ] Kết quả trả về: tối đa 50 dòng, kèm `row_count`, `truncated`, và đơn vị (số lượng / VNĐ).
 - [ ] Lỗi trả về câu ngắn, dễ hiểu cho model (không lộ stack trace, theo `SKILL.md`).
 - [ ] Sau khi MCP chạy ổn: ngừng dùng `webui/connect.py`.
+- [x] Knowledge mô tả output tool quản lý trong `knowledge/`, đồng bộ bằng `scripts/sync_knowledge.py`, có test kiểm tra đủ cột.
+- [ ] Điền các mục `TODO` trong `knowledge/` (ý nghĩa nghiệp vụ metric, `gh_flow`, Shibu).
+- [ ] Đổi tên tool trong `knowledge/` cho khớp tên MCP tool thực tế khi làm xong.
 
 ### Giai đoạn 4 — Kiểm thử & vận hành (≈1 tuần)
 - [ ] Unit test cho `policy.py` (đủ quyền / thiếu quyền / bộ lọc bị ghi đè) và cho từng tool (mock service).
@@ -128,7 +131,8 @@ Bọc các service có sẵn, tham số gọn để model 9B chọn đúng:
 4. REST endpoint (nếu cần)
 5. **MCP tool** trong `app/mcp/tools/<domain>.py`
 6. Khai báo tool trong `permissions.yaml`
-7. Test
+7. Mô tả output trong `knowledge/<domain>.md`, đồng bộ bằng `scripts/sync_knowledge.py`
+8. Test
 
 ## 6. Câu hỏi cần chốt
 - Bản Open WebUI đang dùng gửi danh tính user tới MCP server bằng cách nào? (spike giai đoạn 2)

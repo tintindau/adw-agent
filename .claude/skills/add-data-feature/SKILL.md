@@ -1,6 +1,6 @@
 ---
 name: add-data-feature
-description: Thêm một tính năng lấy dữ liệu mới từ Oracle ADW (SQL → repository → service → API → MCP tool → quyền → test). Dùng khi được yêu cầu thêm báo cáo, chỉ số, endpoint hoặc tool dữ liệu mới, hay thêm bộ lọc/dimension cho tính năng có sẵn.
+description: Thêm một tính năng lấy dữ liệu mới từ Oracle ADW (SQL → repository → service → API → MCP tool → quyền → knowledge → test). Dùng khi được yêu cầu thêm báo cáo, chỉ số, endpoint hoặc tool dữ liệu mới, hay thêm bộ lọc/dimension cho tính năng có sẵn.
 ---
 
 # Thêm tính năng dữ liệu mới
@@ -67,7 +67,16 @@ Chỉ làm bước này nếu `app/mcp/` đã tồn tại (xem `docs/MCP_PLAN.md
 
 Nếu file đã có: thêm tool vào các group được phép, kèm bộ lọc bắt buộc nếu có. Hỏi người dùng nếu chưa rõ group nào.
 
-## 7. Test — `tests/test_<domain>.py`
+## 7. Knowledge — `knowledge/<domain>.md`
+
+Mô tả output cho model trên Open WebUI (xem `knowledge/README.md`):
+
+- Khi nào dùng tool, tham số (kèm ví dụ), cách kết quả được tổng hợp/giới hạn.
+- Bảng dimension, metric, cột output: tên trong dấu `` ` ``, ý nghĩa, đơn vị.
+- Ý nghĩa nghiệp vụ chưa được xác nhận → ghi `TODO`, không đoán.
+- Thêm các tên mới vào `tests/test_knowledge_docs.py` nếu là tool mới.
+
+## 8. Test — `tests/test_<domain>.py`
 
 Theo mẫu `tests/test_sellout.py`, không gọi DB thật:
 
@@ -75,9 +84,10 @@ Theo mẫu `tests/test_sellout.py`, không gọi DB thật:
 - API: `TestClient` + `patch.object(<Domain>Service, ...)` — tham số được chuyển đúng, thiếu `month` → 422, tháng sai → 422 và service không bị gọi.
 - MCP tool (nếu có): mock service, kiểm tra quyền bị từ chối và bộ lọc bị ghi đè.
 
-## 8. Hoàn tất
+## 9. Hoàn tất
 
 - `python -m pytest tests/` phải pass.
 - Nếu tính năng thay thế phần trong `webui/connect.py`, cập nhật hoặc ghi chú.
+- Nhắc người dùng chạy `python scripts/sync_knowledge.py` để cập nhật Knowledge trên Open WebUI.
 - Tick mục liên quan trong `docs/MCP_PLAN.md`.
 - Tóm tắt cho người dùng: file đã thêm, endpoint/tool mới, việc còn cần họ làm (vd kiểm tra SQL trên ADW thật).
