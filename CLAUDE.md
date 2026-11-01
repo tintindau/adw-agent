@@ -51,7 +51,9 @@ Thêm tính năng mới theo thứ tự: SQL file → Repository → Service →
 - Luôn giới hạn số dòng trả về (`ROWNUM <= n` hoặc `FETCH FIRST n ROWS ONLY`).
 - LLM không được sinh SQL; không thêm tool nhận SQL tự do.
 
-**Lưu ý vị trí SQL:** service hiện đọc từ `sql/` ở thư mục gốc; `app/sql/` là bản trùng cũ. Kế hoạch là gom về một chỗ (Giai đoạn 0 trong plan) — khi sửa SQL, kiểm tra service đang đọc file nào.
+**Lưu ý vị trí SQL:** repo đang lẫn hai nơi — `sellout` đọc từ `sql/` ở thư mục gốc, `sellin` đọc từ `app/sql/`. Tính năng mới đặt ở `app/sql/`. Kế hoạch là gom về một chỗ (Giai đoạn 0 trong plan) — khi sửa SQL, kiểm tra service/repository đang đọc file nào.
+
+Thêm tính năng dữ liệu mới: dùng skill `add-data-feature` (`.claude/skills/add-data-feature/SKILL.md`).
 
 **Bảo mật**
 - Không hardcode hay log: `ORACLE_PASSWORD`, `WALLET_PASSWORD`, nội dung wallet, DSN, API key.
