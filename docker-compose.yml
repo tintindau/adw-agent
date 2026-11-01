@@ -7,6 +7,7 @@ services:
       WALLET_LOCATION: /app/wallet
     volumes:
       - ./wallet:/app/wallet:ro
+      - ./logs:/app/logs
     ports:
       - "8000:8000"
     restart: unless-stopped

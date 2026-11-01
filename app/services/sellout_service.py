@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any
 
+from app.core.tracing import traced
 from app.repositories.sellout_repository import SelloutRepository
 
 SQL_FILE = (
@@ -105,6 +106,7 @@ def build_aggregated_siso_query(
 
 class SelloutService:
     @staticmethod
+    @traced("service")
     def get_aggregated_siso(
         month: int,
         dimensions: list[str] | None = None,

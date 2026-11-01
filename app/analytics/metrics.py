@@ -6,6 +6,8 @@ trong SQL hoặc cần kết hợp nhiều kết quả, để model không phả
 
 import pandas as pd
 
+from app.core.tracing import traced
+
 
 def _safe_ratio(numerator: pd.Series, denominator: pd.Series, scale: float = 100.0) -> pd.Series:
     """numerator / denominator * scale, làm tròn 2 chữ số; mẫu số 0 hoặc rỗng → None."""
@@ -15,6 +17,7 @@ def _safe_ratio(numerator: pd.Series, denominator: pd.Series, scale: float = 100
     return ratio.round(2).astype(object).where(ratio.notna(), None)
 
 
+@traced("analytics")
 def add_share_pct(
     df: pd.DataFrame,
     value_column: str,
@@ -30,6 +33,7 @@ def add_share_pct(
     return result
 
 
+@traced("analytics")
 def compare_periods(
     current: pd.DataFrame,
     previous: pd.DataFrame,
@@ -57,6 +61,7 @@ def compare_periods(
     return merged
 
 
+@traced("analytics")
 def add_sell_through_pct(
     df: pd.DataFrame,
     sell_out_column: str = "so_out_qty",

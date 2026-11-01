@@ -73,7 +73,7 @@ Thêm tính năng dữ liệu mới: dùng skill `add-data-feature` (`.claude/sk
 - Bộ lọc dữ liệu theo quyền group phải được áp ở server, ghi đè tham số do model truyền vào.
 
 **Code**
-- Dùng logger trong `app/core/logger.py`, không dùng `print()`.
+- Dùng logger trong `app/core/logger.py`, không dùng `print()`. Sự kiện audit ghi bằng `log_event(...)`.
 - Response thành công: `{"success": true, "data": [...]}`.
 - Cấu hình mới thêm vào `app/core/config.py` và `.env.example`.
 - Tham số tháng dạng `YYYYMM` (int), ngày dạng `YYYYMMDD` (string), validate ở api/.
@@ -90,6 +90,14 @@ Thêm tính năng dữ liệu mới: dùng skill `add-data-feature` (`.claude/sk
 - Bộ lọc quyền luôn phải nằm trong SQL/params để key cache tách theo quyền; không bao giờ lọc dữ liệu theo user **sau** khi lấy từ cache.
 - Truy vấn cần dữ liệu tức thời → `execute(..., use_cache=False)`.
 - Theo dõi tỉ lệ hit qua `GET /api/health` (`query_cache`).
+
+**Log audit (`app/core/logger.py`, `tracing.py`, `audit_middleware.py`)**
+- Mỗi request có `request_id` (header `X-Request-Id` hoặc tự sinh, trả lại trong response). Mọi dòng log của request tự gắn `request_id`, user và `question`.
+- Chuỗi sự kiện: `request` (câu hỏi, tham số) → `service` → `analytics` → `sql` (câu lệnh, params, số dòng, thời gian, cache hit/miss) → `response` (status, thời gian).
+- Câu hỏi và user lấy từ header `X-User-Question`, `X-OpenWebUI-User-*`, `X-OpenWebUI-Chat-Id` (giá trị URL-encode). `webui/connect.py` gửi các header này; MCP server sau này cũng phải đặt cùng context.
+- Hàm service/analytics mới phải gắn `@traced("service")` / `@traced("analytics")` (dưới `@staticmethod`).
+- Log ghi JSON ra stdout và `logs/naw-agent.log` (xoay vòng 20MB × 10). Cấu hình: `LOG_LEVEL`, `LOG_DIR`, `LOG_JSON`, `LOG_SQL`.
+- Không log credential. Lỗi không xử lý: traceback chỉ nằm trong log; client nhận message ngắn kèm mã `request_id` để tra.
 
 ## MCP tool (cho model 9B)
 

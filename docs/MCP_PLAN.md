@@ -76,11 +76,11 @@ app/
 
 ### Giai đoạn 0 — Dọn nền (≈2–3 ngày)
 - [ ] Gộp SQL về một chỗ (`app/sql/`), cập nhật đường dẫn trong service và `Dockerfile`, xoá bản trùng.
-- [ ] Hoàn thiện `app/core/logger.py` (JSON log, có `request_id`, `user`, `tool`, `duration_ms`).
+- [x] Hoàn thiện `app/core/logger.py` (JSON log, có `request_id`, `user`, `tool`, `duration_ms`).
 - [ ] Thêm `call_timeout` cho connection (vd 30s) và giới hạn số dòng trả về ở `QueryExecutor`.
 - [ ] Ghim phiên bản trong `requirements.txt`, thêm `mcp` (Python SDK) và `httpx`, `pyyaml`.
 - [ ] Thêm volume `open-webui-data:/app/backend/data` cho service `open-webui`.
-- [ ] Sửa `webui/connect.py` dùng `month` cho đúng API (giữ chạy tạm trong lúc làm MCP).
+- [x] Sửa `webui/connect.py` dùng `month` cho đúng API (giữ chạy tạm trong lúc làm MCP); gửi kèm câu hỏi và user qua header để ghi log.
 
 ### Giai đoạn 1 — MCP server tối thiểu (≈3 ngày)
 - [ ] `app/mcp/server.py`: tạo `FastMCP("naw-agent")`, mount Streamable HTTP app vào FastAPI tại `/mcp`.
@@ -141,7 +141,8 @@ Bọc các service có sẵn, tham số gọn để model 9B chọn đúng:
 ### Giai đoạn 4 — Kiểm thử & vận hành (≈1 tuần)
 - [ ] Unit test cho `policy.py` (đủ quyền / thiếu quyền / bộ lọc bị ghi đè) và cho từng tool (mock service).
 - [ ] Bộ 30–50 câu hỏi thực tế của người dùng → chạy với qwen, ghi lại tool được chọn và tham số; chỉnh mô tả tool cho đến khi đạt tỉ lệ đúng mong muốn.
-- [ ] Audit log mỗi lần gọi tool: user, group, tool, tham số, số dòng, thời gian.
+- [x] Audit log: request (câu hỏi, user) → service → analytics → sql → response, chung `request_id`, ghi JSON ra `logs/`.
+- [ ] Khi có MCP server: đặt request context (user, câu hỏi, group) cho mỗi lần gọi tool, thêm `group` vào log.
 - [ ] Health check trong `docker-compose.yml`; ghi chú cài trên Docker Desktop Windows (đường dẫn `wallet/`, `.env`).
 - [ ] Cập nhật `README.md` và `SKILL.md` với quy tắc thêm MCP tool mới.
 

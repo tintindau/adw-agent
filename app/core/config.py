@@ -25,5 +25,11 @@ class Settings(BaseSettings):
     query_cache_ttl_seconds: int = 900
     query_cache_max_entries: int = 256
 
+    # Logging (app/core/logger.py)
+    log_level: str = "INFO"
+    log_dir: str = "logs"  # rỗng = chỉ ghi stdout
+    log_json: bool = True
+    log_sql: bool = True  # ghi câu SQL và params đã thực thi
+
 
 settings = Settings()

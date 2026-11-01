@@ -5,7 +5,10 @@ from pathlib import Path
 
 import pandas as pd
 
+from app.core.tracing import traced
 
+
+@traced("analytics")
 def export_csv_7z(df: pd.DataFrame, export_dir: Path, prefix: str = "export") -> str:
     """Ghi DataFrame ra CSV (UTF-8 BOM để Excel đọc đúng tiếng Việt), nén .7z, trả đường dẫn file .7z."""
     import py7zr

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any
 
 from app.analytics import export_csv_7z, to_frame, top_n_with_others
+from app.core.tracing import traced
 from app.repositories.sellout_repository import SelloutRepository
 
 SQL_FILE = (
@@ -110,6 +111,7 @@ def build_result(rows: list[dict[str, Any]], export_dir: Path = EXPORT_DIR) -> d
 
 class SelloutProdTopClassCatService:
     @staticmethod
+    @traced("service")
     def get_top_products(
         month: int,
         dimensions: list[str] | None = None,

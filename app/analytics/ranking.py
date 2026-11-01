@@ -2,6 +2,8 @@
 
 import pandas as pd
 
+from app.core.tracing import traced
+
 LABEL_SEPARATOR = " - "
 
 
@@ -10,6 +12,7 @@ def make_labels(df: pd.DataFrame, label_columns: list[str]) -> pd.Series:
     return df[label_columns].astype(str).agg(LABEL_SEPARATOR.join, axis=1)
 
 
+@traced("analytics")
 def top_n_with_others(
     df: pd.DataFrame,
     value_column: str,
