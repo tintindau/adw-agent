@@ -3,6 +3,8 @@
 import json
 import logging
 import unittest
+from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 from urllib.parse import quote
 
@@ -202,3 +204,65 @@ class JsonFormatterTests(unittest.TestCase):
         self.assertEqual(line["request_id"], "r9")
         self.assertEqual(line["question"], "Top sản phẩm?")
         self.assertEqual(line["rows"], 3)
+
+
+class UserDailyFileHandlerTests(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        from zoneinfo import ZoneInfo
+
+        from app.core.logger import UserDailyFileHandler
+
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.dir = Path(self.tmp.name)
+        self.handler = UserDailyFileHandler(self.dir, tz=ZoneInfo("Asia/Ho_Chi_Minh"), retention_days=30)
+        self.handler.setFormatter(JsonFormatter(ZoneInfo("Asia/Ho_Chi_Minh")))
+        self.handler.addFilter(ContextFilter())
+
+    def emit(self, created: float, **context):
+        token = set_context(**context)
+        try:
+            record = logging.LogRecord(AUDIT_LOGGER_NAME, logging.INFO, __file__, 1, "sql", None, None)
+            record.created = created
+            record.fields = {"event": "sql"}
+            self.handler.handle(record)
+        finally:
+            reset_context(token)
+
+    def test_split_by_user_and_local_date(self):
+        # 2026-11-01 18:00 UTC = 2026-11-02 01:00 giờ Việt Nam
+        ts = datetime(2026, 11, 1, 18, 0, tzinfo=timezone.utc).timestamp()
+        self.emit(ts, request_id="r1", user_email="an@kangaroo.vn")
+        self.emit(ts, request_id="r2", user_email="binh@kangaroo.vn")
+        self.emit(ts, request_id="r3", user_email="an@kangaroo.vn")
+
+        day = self.dir / "2026-11-02"
+        self.assertEqual(sorted(p.name for p in day.iterdir()), ["an@kangaroo.vn.log", "binh@kangaroo.vn.log"])
+        lines = (day / "an@kangaroo.vn.log").read_text(encoding="utf-8").splitlines()
+        self.assertEqual([json.loads(line)["request_id"] for line in lines], ["r1", "r3"])
+
+    def test_anonymous_and_system(self):
+        ts = datetime(2026, 11, 1, 3, 0, tzinfo=timezone.utc).timestamp()
+        self.emit(ts, request_id="r1")  # request không có user
+        self.emit(ts)  # ngoài request
+        names = sorted(p.name for p in (self.dir / "2026-11-01").iterdir())
+        self.assertEqual(names, ["_anonymous.log", "_system.log"])
+
+    def test_unsafe_user_name_is_sanitized(self):
+        ts = datetime(2026, 11, 1, 3, 0, tzinfo=timezone.utc).timestamp()
+        self.emit(ts, request_id="r1", user_name="../Nguyễn Văn A")
+        files = list((self.dir / "2026-11-01").iterdir())
+        self.assertEqual(len(files), 1)
+        self.assertNotIn("..", files[0].name)
+        self.assertEqual(files[0].parent, self.dir / "2026-11-01")
+
+    def test_old_day_folders_are_removed(self):
+        from datetime import date
+
+        for name in ["2026-09-01", "2026-10-15", "not-a-date"]:
+            (self.dir / name).mkdir()
+        removed = self.handler.cleanup(date(2026, 11, 1))
+        self.assertEqual(removed, ["2026-09-01"])
+        self.assertTrue((self.dir / "2026-10-15").exists())
+        self.assertTrue((self.dir / "not-a-date").exists())

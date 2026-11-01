@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     log_dir: str = "logs"  # rỗng = chỉ ghi stdout
     log_json: bool = True
     log_sql: bool = True  # ghi câu SQL và params đã thực thi
+    log_timezone: str = "Asia/Ho_Chi_Minh"  # dùng để chia file log theo ngày
+    log_retention_days: int = 90  # 0 = không tự xoá
 
 
 settings = Settings()

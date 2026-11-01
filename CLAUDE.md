@@ -96,7 +96,7 @@ Thêm tính năng dữ liệu mới: dùng skill `add-data-feature` (`.claude/sk
 - Chuỗi sự kiện: `request` (câu hỏi, tham số) → `service` → `analytics` → `sql` (câu lệnh, params, số dòng, thời gian, cache hit/miss) → `response` (status, thời gian).
 - Câu hỏi và user lấy từ header `X-User-Question`, `X-OpenWebUI-User-*`, `X-OpenWebUI-Chat-Id` (giá trị URL-encode). `webui/connect.py` gửi các header này; MCP server sau này cũng phải đặt cùng context.
 - Hàm service/analytics mới phải gắn `@traced("service")` / `@traced("analytics")` (dưới `@staticmethod`).
-- Log ghi JSON ra stdout và `logs/naw-agent.log` (xoay vòng 20MB × 10). Cấu hình: `LOG_LEVEL`, `LOG_DIR`, `LOG_JSON`, `LOG_SQL`.
+- Log ghi JSON ra stdout và file tách theo ngày + user: `logs/<YYYY-MM-DD>/<email user>.log` (`_anonymous.log`: request không có user, `_system.log`: ngoài request). Ngày theo `LOG_TIMEZONE`, thư mục cũ hơn `LOG_RETENTION_DAYS` tự xoá. Cấu hình khác: `LOG_LEVEL`, `LOG_DIR`, `LOG_JSON`, `LOG_SQL`.
 - Không log credential. Lỗi không xử lý: traceback chỉ nằm trong log; client nhận message ngắn kèm mã `request_id` để tra.
 
 ## MCP tool (cho model 9B)

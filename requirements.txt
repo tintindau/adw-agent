@@ -9,3 +9,4 @@ pydantic-settings
 sqlparse
 py7zr
 httpx
+tzdata

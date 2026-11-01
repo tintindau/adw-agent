@@ -14,6 +14,8 @@ setup_logging(
     level=settings.log_level,
     log_dir=settings.log_dir or None,
     json_format=settings.log_json,
+    timezone_name=settings.log_timezone,
+    retention_days=settings.log_retention_days,
 )
 
 app = FastAPI(
